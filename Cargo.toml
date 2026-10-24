@@ -1,0 +1,12 @@
+[package]
+name = "cpulimit"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+license = "GPL-2.0-or-later"
+description = "Limit a Unix process tree's CPU use with SIGSTOP/SIGCONT"
+
+[dependencies]
+libc = "0.2"
+signal-hook = "0.3.18"
+sysinfo = { version = "0.39.3", default-features = false, features = ["system"] }
