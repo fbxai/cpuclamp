@@ -1,5 +1,5 @@
 #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "freebsd")))]
-compile_error!("cpulimit supports Linux, macOS, and FreeBSD");
+compile_error!("cpuclamp supports Linux, macOS, and FreeBSD");
 
 mod cli;
 mod limiter;
@@ -222,7 +222,7 @@ fn main() {
     let cpus = match u32::try_from(count) {
         Ok(n) if n > 0 => n,
         _ => {
-            eprintln!("cpulimit: cannot determine online CPU count");
+            eprintln!("cpuclamp: cannot determine online CPU count");
             std::process::exit(1);
         }
     };
@@ -234,13 +234,13 @@ fn main() {
         }
         Ok(Action::List) => {
             if let Err(e) = list(cpus) {
-                eprintln!("cpulimit: {e}");
+                eprintln!("cpuclamp: {e}");
                 std::process::exit(1);
             }
             return;
         }
         Err(e) => {
-            eprintln!("cpulimit: {e}\nUse --help for usage.");
+            eprintln!("cpuclamp: {e}\nUse --help for usage.");
             std::process::exit(1);
         }
     };
@@ -249,14 +249,14 @@ fn main() {
         if let Err(e) =
             signal_hook::flag::register_usize(number, Arc::clone(&signal), number as usize)
         {
-            eprintln!("cpulimit: cannot install signal handler: {e}");
+            eprintln!("cpuclamp: cannot install signal handler: {e}");
             std::process::exit(1);
         }
     }
     let code = match run(config, &signal) {
         Ok(code) => code,
         Err(e) => {
-            eprintln!("cpulimit: {e}");
+            eprintln!("cpuclamp: {e}");
             1
         }
     };

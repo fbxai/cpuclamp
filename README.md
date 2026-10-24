@@ -1,14 +1,14 @@
-# Rust cpulimit
+# cpuclamp
 
-An independent Unix CLI with the original program's PID, executable, and command modes. Requires Rust 1.95 or newer; process APIs support Linux, macOS, and FreeBSD. The C implementation and build are unchanged.
+Limit a Unix process tree's CPU use with SIGSTOP/SIGCONT. Supports PID, executable, and command modes. Requires Rust 1.95 or newer; process APIs support Linux, macOS, and FreeBSD.
 
 ```sh
-cargo build --release --manifest-path rust/Cargo.toml
-rust/target/release/cpulimit -l 25 -p 12345
-rust/target/release/cpulimit -l 50 -i -e worker
-rust/target/release/cpulimit -l 100 -- command argument
-rust/target/release/cpulimit --list
-cargo test --manifest-path rust/Cargo.toml
+cargo build --release
+./target/release/cpuclamp -l 25 -p 12345
+./target/release/cpuclamp -l 50 -i -e worker
+./target/release/cpuclamp -l 100 -- command argument
+./target/release/cpuclamp --list
+cargo test
 ```
 
 `-l/--limit N` is required when limiting a target and accepts an integer from zero through 100 times the online logical CPU count. 100 means one fully occupied core, including all threads; 200 allows two cores. With `-i/--include-children`, the root and recursively discovered descendants share this budget. CPU milliseconds and monotonic elapsed time drive an approximately 100 ms SIGSTOP/SIGCONT duty cycle. Limits are approximate: scheduling, accounting resolution, process discovery, and workloads that block on I/O affect observed use. Zero stops targets continuously without periodic resume pulses.
@@ -24,3 +24,5 @@ Observed descendants remain included after reparenting while the root lives. Roo
 SIGINT and SIGTERM handlers only record the signal. Ordinary shutdown and control-error cleanup resume all identities stopped by this limiter, including retained descendants. Attach mode then exits with 128 plus the signal. Command mode resumes first, forwards the received signal to its unreaped direct child, waits up to two seconds, then kills and reaps that child if necessary. A control error uses SIGTERM for the same bounded child cleanup and exits unsuccessfully. Normal command exit codes pass through; signal termination returns 128 plus the signal. Descendants are resumed rather than terminated. Resume failures are diagnosed and fail the limiter. SIGKILL, a host crash, or lost signal permissions can prevent cleanup; externally stopped targets can also be resumed if this limiter subsequently stopped them.
 
 `sysinfo` supplies process enumeration, ancestry, executable paths, and cumulative CPU accounting across the three Unix platforms; its optional subsystems and task enumeration are disabled. `libc` supplies POSIX signals and the online CPU count. `signal-hook` supplies flag-only signal handlers. There is no CLI framework or additional test dependency. The runtime tests create disposable process groups with unconditional teardown and bounded waits; the ignored `fixture` test is their subprocess entry point.
+
+Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE).

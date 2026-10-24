@@ -350,7 +350,7 @@ impl Controller {
 impl Drop for Controller {
     fn drop(&mut self) {
         if let Err(error) = self.resume_all() {
-            eprintln!("cpulimit: cleanup failed: {error}");
+            eprintln!("cpuclamp: cleanup failed: {error}");
         }
     }
 }

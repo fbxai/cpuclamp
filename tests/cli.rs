@@ -9,7 +9,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 use sysinfo::{Pid, ProcessRefreshKind, ProcessStatus, ProcessesToUpdate, System};
 
-const BIN: &str = env!("CARGO_BIN_EXE_cpulimit");
+const BIN: &str = env!("CARGO_BIN_EXE_cpuclamp");
 static NEXT: AtomicUsize = AtomicUsize::new(0);
 
 struct Temp(PathBuf);
@@ -17,7 +17,7 @@ struct Temp(PathBuf);
 impl Temp {
     fn new() -> Self {
         let path = std::env::temp_dir().join(format!(
-            "cpulimit-test-{}-{}",
+            "cpuclamp-test-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -83,8 +83,8 @@ fn fixture_command(mode: &str, dir: &Path) -> Command {
     let mut command = Command::new(std::env::current_exe().unwrap());
     command
         .args(["--exact", "fixture", "--ignored", "--nocapture"])
-        .env("CPULIMIT_FIXTURE", mode)
-        .env("CPULIMIT_TEST_DIR", dir);
+        .env("CPUCLAMP_FIXTURE", mode)
+        .env("CPUCLAMP_TEST_DIR", dir);
     command
 }
 
@@ -154,7 +154,7 @@ fn help_errors_status_and_argument_bytes() {
     assert!(absent.wait(Duration::from_secs(3)).success());
     let mut spawn_error = Owned::spawn(
         Command::new(BIN)
-            .args(["-l", "1", "--", "/nonexistent/cpulimit-test-command"])
+            .args(["-l", "1", "--", "/nonexistent/cpuclamp-test-command"])
             .stderr(Stdio::null()),
     );
     assert!(!spawn_error.wait(Duration::from_secs(3)).success());
@@ -184,7 +184,7 @@ fn help_errors_status_and_argument_bytes() {
 #[test]
 fn list_configured_live_sessions() {
     let temp = Temp::new();
-    let binary = temp.0.join("cpulimit");
+    let binary = temp.0.join("cpuclamp");
     fs::copy(BIN, &binary).unwrap();
     let list = || {
         let output = Command::new(&binary).arg("--list").output().unwrap();
@@ -201,7 +201,7 @@ fn list_configured_live_sessions() {
     eventually(|| sample(target.pid()).1 == ProcessStatus::Stop);
 
     let program = std::env::current_exe().unwrap();
-    let secret = "cpulimit-list-must-never-print-this-argument";
+    let secret = "cpuclamp-list-must-never-print-this-argument";
     let mut command_limit = Owned::spawn(
         Command::new(&binary)
             .args(["-il25", "--"])
@@ -214,14 +214,14 @@ fn list_configured_live_sessions() {
                 "--skip",
                 secret,
             ])
-            .env("CPULIMIT_FIXTURE", "handle")
-            .env("CPULIMIT_TEST_DIR", &temp.0),
+            .env("CPUCLAMP_FIXTURE", "handle")
+            .env("CPUCLAMP_TEST_DIR", &temp.0),
     );
     pid_file(&temp.0.join("command-pid"));
 
     let selector = temp.0.join("absent\n\t\x1bworker");
     let mut waiting = Owned::spawn(Command::new(&binary).arg("-l50").arg("-e").arg(&selector));
-    let other_binary = temp.0.join("another-cpulimit");
+    let other_binary = temp.0.join("another-cpuclamp");
     fs::copy(BIN, &other_binary).unwrap();
     let _other = Owned::spawn(Command::new(&other_binary).args(["-l75", "-e", "absent-other"]));
 
@@ -299,8 +299,8 @@ fn command_shutdown_forwards_and_bounds_ignoring_child() {
             .args(["-l25", "--"])
             .arg(std::env::current_exe().unwrap())
             .args(["--exact", "fixture", "--ignored", "--nocapture"])
-            .env("CPULIMIT_FIXTURE", mode)
-            .env("CPULIMIT_TEST_DIR", &temp.0);
+            .env("CPUCLAMP_FIXTURE", mode)
+            .env("CPUCLAMP_TEST_DIR", &temp.0);
         let mut control = Owned::spawn(&mut command);
         let child_pid = pid_file(&temp.0.join("command-pid"));
         eventually(|| sample(child_pid).1 == ProcessStatus::Stop);
@@ -342,8 +342,8 @@ fn executable_wait_reacquire_exact_name_and_lazy() {
     let mut unrelated_command = Command::new(&longer);
     unrelated_command
         .args(["--exact", "fixture", "--ignored", "--nocapture"])
-        .env("CPULIMIT_FIXTURE", "busy")
-        .env("CPULIMIT_TEST_DIR", &temp.0);
+        .env("CPUCLAMP_FIXTURE", "busy")
+        .env("CPUCLAMP_TEST_DIR", &temp.0);
     let unrelated = Owned::spawn(&mut unrelated_command);
     let mut control = Owned::spawn(Command::new(BIN).args([
         OsStr::new("-l0"),
@@ -357,8 +357,8 @@ fn executable_wait_reacquire_exact_name_and_lazy() {
         let mut target_command = Command::new(&path);
         target_command
             .args(["--exact", "fixture", "--ignored", "--nocapture"])
-            .env("CPULIMIT_FIXTURE", "busy")
-            .env("CPULIMIT_TEST_DIR", &temp.0);
+            .env("CPUCLAMP_FIXTURE", "busy")
+            .env("CPUCLAMP_TEST_DIR", &temp.0);
         let mut target = Owned::spawn(&mut target_command);
         eventually(|| sample(target.pid()).1 == ProcessStatus::Stop);
         target.signal(libc::SIGKILL);
@@ -397,7 +397,7 @@ fn sustained_cpu_budget_includes_threads() {
     let cpus = unsafe { libc::sysconf(libc::_SC_NPROCESSORS_ONLN) };
     for threads in [1, if cpus >= 4 { 4 } else { 1 }] {
         let target = Owned::spawn(
-            fixture_command("busy", &temp.0).env("CPULIMIT_THREADS", threads.to_string()),
+            fixture_command("busy", &temp.0).env("CPUCLAMP_THREADS", threads.to_string()),
         );
         eventually(|| sample(target.pid()).0 > 100);
         let before = sample(target.pid()).0;
@@ -427,14 +427,14 @@ fn sustained_cpu_budget_includes_threads() {
 #[test]
 #[ignore = "disposable subprocess entry point, invoked by runtime tests"]
 fn fixture() {
-    let dir = PathBuf::from(std::env::var_os("CPULIMIT_TEST_DIR").unwrap());
-    match std::env::var("CPULIMIT_FIXTURE").unwrap().as_str() {
+    let dir = PathBuf::from(std::env::var_os("CPUCLAMP_TEST_DIR").unwrap());
+    match std::env::var("CPUCLAMP_FIXTURE").unwrap().as_str() {
         "busy" => {
             // Survive POSIX SIGHUP when a stopped disposable group becomes orphaned.
             unsafe {
                 libc::signal(libc::SIGHUP, libc::SIG_IGN);
             }
-            let threads = std::env::var("CPULIMIT_THREADS")
+            let threads = std::env::var("CPUCLAMP_THREADS")
                 .ok()
                 .and_then(|n| n.parse::<usize>().ok())
                 .unwrap_or(1);

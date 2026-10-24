@@ -26,8 +26,8 @@ pub enum Action {
 
 pub fn help(cpus: u32) -> String {
     format!(
-        "Usage: cpulimit -l N [OPTIONS] (-p PID | -e FILE | COMMAND [ARGS])\n\
-         \x20      cpulimit --list\n\
+        "Usage: cpuclamp -l N [OPTIONS] (-p PID | -e FILE | COMMAND [ARGS])\n\
+         \x20      cpuclamp --list\n\
          -l, --limit=N          CPU percent, 0..{} (100 = one core)\n\
          -p, --pid=PID          attach to PID (implies --lazy)\n\
          -e, --exe=FILE         exact executable basename or path\n\
