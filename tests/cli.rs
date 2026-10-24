@@ -129,6 +129,17 @@ fn pid_file(path: &Path) -> i32 {
 }
 
 #[test]
+fn version_reports_package_version() {
+    let output = Command::new(BIN).arg("--version").output().unwrap();
+    assert!(output.status.success());
+    assert!(output.stderr.is_empty());
+    assert_eq!(
+        output.stdout,
+        format!("cpuclamp {}\n", env!("CARGO_PKG_VERSION")).as_bytes()
+    );
+}
+
+#[test]
 fn help_errors_status_and_argument_bytes() {
     let mut help = Owned::spawn(Command::new(BIN).arg("--help"));
     assert!(help.wait(Duration::from_secs(3)).success());

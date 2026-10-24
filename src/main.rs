@@ -232,6 +232,10 @@ fn main() {
             print!("{}", cli::help(cpus));
             return;
         }
+        Ok(Action::Version) => {
+            println!("cpuclamp {}", env!("CARGO_PKG_VERSION"));
+            return;
+        }
         Ok(Action::List) => {
             if let Err(e) = list(cpus) {
                 eprintln!("cpuclamp: {e}");

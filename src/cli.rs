@@ -20,6 +20,7 @@ pub struct Config {
 #[derive(Debug, PartialEq)]
 pub enum Action {
     Help,
+    Version,
     List,
     Limit(Config),
 }
@@ -36,6 +37,7 @@ pub fn help(cpus: u32) -> String {
          -v, --verbose          show control statistics on stderr\n\
          --list                list configured live sessions (use alone)\n\
          -h, --help             show help\n\
+         --version             show version\n\
          --                    end options; command arguments are passed verbatim\n\n\
          --list is a best-effort snapshot at this executable path, including\n\
          waiting executable sessions. OS permissions can hide sessions. No history,\n\
@@ -79,12 +81,18 @@ pub fn parse(args: Vec<OsString>, cpus: u32) -> Result<Action, String> {
             let split = arg.iter().position(|b| *b == b'=');
             let name = &arg[..split.unwrap_or(arg.len())];
             match name {
-                b"--help" | b"--list" | b"--verbose" | b"--lazy" | b"--include-children" => {
+                b"--help"
+                | b"--version"
+                | b"--list"
+                | b"--verbose"
+                | b"--lazy"
+                | b"--include-children" => {
                     if split.is_some() {
                         return Err("this option does not take a value".into());
                     }
                     match name {
                         b"--help" => return Ok(Action::Help),
+                        b"--version" => return Ok(Action::Version),
                         b"--list" => list = true,
                         b"--verbose" => verbose = true,
                         b"--lazy" => lazy = true,
@@ -229,6 +237,25 @@ mod tests {
             Target::Command(args(&["cmd", "--help"]))
         );
         assert_eq!(parse(args(&["--help"]), 1), Ok(Action::Help));
+    }
+
+    #[test]
+    fn version_action_and_command_boundaries() {
+        assert_eq!(parse(args(&["--version"]), 1), Ok(Action::Version));
+        assert!(parse(args(&["--version=1"]), 1).is_err());
+        for values in [
+            vec!["-l1", "cmd", "--version"],
+            vec!["-l1", "--", "cmd", "--version"],
+        ] {
+            assert_eq!(
+                config(args(&values), 1).target,
+                Target::Command(args(&["cmd", "--version"]))
+            );
+        }
+        assert_eq!(
+            config(args(&["-l1", "--", "--version"]), 1).target,
+            Target::Command(args(&["--version"]))
+        );
     }
 
     #[test]

@@ -8,6 +8,7 @@ cargo build --release
 ./target/release/cpuclamp -l 50 -i -e worker
 ./target/release/cpuclamp -l 100 -- command argument
 ./target/release/cpuclamp --list
+./target/release/cpuclamp --version
 cargo test
 ```
 
@@ -24,5 +25,18 @@ Observed descendants remain included after reparenting while the root lives. Roo
 SIGINT and SIGTERM handlers only record the signal. Ordinary shutdown and control-error cleanup resume all identities stopped by this limiter, including retained descendants. Attach mode then exits with 128 plus the signal. Command mode resumes first, forwards the received signal to its unreaped direct child, waits up to two seconds, then kills and reaps that child if necessary. A control error uses SIGTERM for the same bounded child cleanup and exits unsuccessfully. Normal command exit codes pass through; signal termination returns 128 plus the signal. Descendants are resumed rather than terminated. Resume failures are diagnosed and fail the limiter. SIGKILL, a host crash, or lost signal permissions can prevent cleanup; externally stopped targets can also be resumed if this limiter subsequently stopped them.
 
 `sysinfo` supplies process enumeration, ancestry, executable paths, and cumulative CPU accounting across the three Unix platforms; its optional subsystems and task enumeration are disabled. `libc` supplies POSIX signals and the online CPU count. `signal-hook` supplies flag-only signal handlers. There is no CLI framework or additional test dependency. The runtime tests create disposable process groups with unconditional teardown and bounded waits; the ignored `fixture` test is their subprocess entry point.
+
+## Releases
+
+`cpuclamp --version` prints the package version from `Cargo.toml`, for example `cpuclamp 0.1.0`.
+
+To release a new version, update `version` in `Cargo.toml`, run `cargo check` to update `Cargo.lock`, and commit both files. Create and push a matching `v` tag on that commit:
+
+```sh
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The release workflow runs the tests, builds an optimized Linux x86_64 binary on Ubuntu 24.04, and verifies that its version matches the tag. It then creates a GitHub release with generated release notes and uploads `cpuclamp-v0.1.0-x86_64-unknown-linux-gnu.tar.gz`, containing `cpuclamp`, `README.md`, and `LICENSE`. The prebuilt binary targets Ubuntu 24.04 and compatible glibc-based Linux systems. Download it from the repository's [Releases page](https://github.com/fbxai/cpuclamp/releases). macOS and FreeBSD users can build from source.
 
 Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE).
